@@ -1,9 +1,9 @@
 fn memory(c: u8) -> usize {
-match c {
-b'A'..=b'Z' => usize::from(c - b'A' + 1),
-b'0'..=b'9' => usize::from(c - b'0'),
-_ => 0,
-}
+    match c {
+        b'A'..=b'Z' => usize::from(c - b'A' + 1),
+        b'0'..=b'9' => usize::from(c - b'0'),
+        _ => 0,
+    }
 }
 
 fn rle(s: &str) -> String {
@@ -25,7 +25,7 @@ fn rle(s: &str) -> String {
     }
     if n > 0 {
         result.push_str(&format!("{}", n));
-    result.push(last as char);
+        result.push(last as char);
     }
     result
 }
@@ -36,15 +36,23 @@ fn main() {
     let part1 = input.bytes().map(memory).sum::<usize>();
     println!("{part1}");
 
-    let part2 = input.lines().map(|line| {
-        let keep = line.len() / 10;
-        let start = &line[..keep];
-        let end = &line[line.len() - keep..];
-        let kept = line.len() - 2 * keep;
-        format!("{start}{kept}{end}")
-    }).map(|line| line.bytes().map(memory).sum::<usize>()).sum::<usize>();
+    let part2 = input
+        .lines()
+        .map(|line| {
+            let keep = line.len() / 10;
+            let start = &line[..keep];
+            let end = &line[line.len() - keep..];
+            let kept = line.len() - 2 * keep;
+            format!("{start}{kept}{end}")
+        })
+        .map(|line| line.bytes().map(memory).sum::<usize>())
+        .sum::<usize>();
     println!("{part2}");
 
-    let part3 = input.lines().map(rle).map(|line| line.bytes().map(memory).sum::<usize>()).sum::<usize>();
+    let part3 = input
+        .lines()
+        .map(rle)
+        .map(|line| line.bytes().map(memory).sum::<usize>())
+        .sum::<usize>();
     println!("{part3}");
 }
