@@ -2,9 +2,9 @@ fn reduce_part2(line: &str) -> usize {
     let mut bs = line.as_bytes().to_vec();
     while let Some(idx) = bs
         .windows(2)
-        .position(|w| matches!(w, [b'0'..=b'9', b'a'..=b'z' | b'-']| [b'a'..=b'z' | b'-', b'0'..=b'9']))
+        .position(|w| matches!(w, [b'0'..=b'9', b'a'..=b'z' | b'-'] | [b'a'..=b'z' | b'-', b'0'..=b'9']))
     {
-        bs.drain(idx..=idx+1);
+        bs.drain(idx..=idx + 1);
     }
     bs.len()
 }
@@ -13,9 +13,9 @@ fn reduce_part3(line: &str) -> usize {
     let mut bs = line.as_bytes().to_vec();
     while let Some(idx) = bs
         .windows(2)
-        .position(|w| matches!(w, [b'0'..=b'9', b'a'..=b'z']| [b'a'..=b'z', b'0'..=b'9']))
+        .position(|w| matches!(w, [b'0'..=b'9', b'a'..=b'z'] | [b'a'..=b'z', b'0'..=b'9']))
     {
-        bs.drain(idx..=idx+1);
+        bs.drain(idx..=idx + 1);
     }
     bs.len()
 }
