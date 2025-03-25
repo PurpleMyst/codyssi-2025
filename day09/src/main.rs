@@ -1,97 +1,112 @@
-use std::collections::HashMap;
+use std::cmp::min;
 
-fn solve_part1() -> i64 {
-    let input = include_str!("input.txt");
+// With only 26 unique names, we use an array indexed by the first letter (A..Z)
+const NUM_NAMES: usize = 26;
 
-    let (balances, transactions) = input.split_once("\n\n").unwrap();
-    let mut state = balances
-        .lines()
-        .map(|line| {
-            let (name, balance) = line.split_once(" HAS ").unwrap();
-            let balance = balance.parse::<i64>().unwrap();
-            (name, balance)
-        })
-        .collect::<HashMap<_, _>>();
-    transactions.lines().for_each(|line| {
-        let mut it = line.split(' ');
-        let from = it.nth(1).unwrap();
-        let to = it.nth(1).unwrap();
-        let amt = it.nth(1).unwrap().parse::<i64>().unwrap();
-        state.entry(from).and_modify(|bal| *bal -= amt);
-        state.entry(to).and_modify(|bal| *bal += amt);
-    });
-
-    let mut m = state.values().copied().collect::<Vec<_>>();
-    m.sort_unstable();
-    m.into_iter().rev().take(3).sum::<i64>()
+fn idx(name: &str) -> usize {
+    // Assumes name starts with a unique capital letter A-Z.
+    name.as_bytes()[0] as usize - b'A' as usize
 }
 
-fn solve_part2() -> i64 {
-    let input = include_str!("input.txt");
-
-    let (balances, transactions) = input.split_once("\n\n").unwrap();
-    let mut state = balances
-        .lines()
-        .map(|line| {
-            let (name, balance) = line.split_once(" HAS ").unwrap();
-            let balance = balance.parse::<i64>().unwrap();
-            (name, balance)
-        })
-        .collect::<HashMap<_, _>>();
-    transactions.lines().for_each(|line| {
-        let mut it = line.split(' ');
-        let from = it.nth(1).unwrap();
-        let to = it.nth(1).unwrap();
-        let amt = std::cmp::min(it.nth(1).unwrap().parse::<i64>().unwrap(), state[from]);
-        state.entry(from).and_modify(|bal| *bal -= amt);
-        state.entry(to).and_modify(|bal| *bal += amt);
-    });
-
-    let mut m = state.values().copied().collect::<Vec<_>>();
-    m.sort_unstable();
-    m.into_iter().rev().take(3).sum::<i64>()
+fn parse_balance_line(line: &str) -> (usize, i16) {
+    let (name, balance_str) = line.split_once(" HAS ").unwrap();
+    let balance = balance_str.parse::<i16>().unwrap();
+    (idx(name), balance)
 }
 
-fn solve_part3() -> i64 {
+fn parse_txn_line(line: &str) -> (usize, usize, i16) {
+    let mut iter = line.split_whitespace().skip(1).step_by(2);
+    let from = idx(iter.next().unwrap());
+    let to = idx(iter.next().unwrap());
+    let amt = iter.next().unwrap().parse::<i16>().unwrap();
+    (from, to, amt)
+}
+
+fn sum_top_three(balances: &[i16; NUM_NAMES]) -> i16 {
+    let mut top1 = i16::MIN;
+    let mut top2 = i16::MIN;
+    let mut top3 = i16::MIN;
+    for &bal in balances.iter() {
+        if bal > top1 {
+            top3 = top2;
+            top2 = top1;
+            top1 = bal;
+        } else if bal > top2 {
+            top3 = top2;
+            top2 = bal;
+        } else if bal > top3 {
+            top3 = bal;
+        }
+    }
+    top1 + top2 + top3
+}
+
+fn solve_part1() -> i16 {
     let input = include_str!("input.txt");
+    let (balances_str, transactions_str) = input.split_once("\n\n").unwrap();
 
-    let (balances, transactions) = input.split_once("\n\n").unwrap();
-    let mut balances = balances
-        .lines()
-        .map(|line| {
-            let (name, balance) = line.split_once(" HAS ").unwrap();
-            let balance = balance.parse::<i64>().unwrap();
-            (name, balance)
-        })
-        .collect::<HashMap<_, _>>();
-    let mut debts = Vec::new();
-    transactions.lines().for_each(|line| {
-        let mut it = line.split(' ');
-        let from = it.nth(1).unwrap();
-        let to = it.nth(1).unwrap();
-        let mut amt = it.nth(1).unwrap().parse::<i64>().unwrap();
+    let mut state = [0i16; NUM_NAMES];
+    for line in balances_str.lines() {
+        let (i, bal) = parse_balance_line(line);
+        state[i] = bal;
+    }
+    for line in transactions_str.lines() {
+        let (from, to, amt) = parse_txn_line(line);
+        state[from] -= amt;
+        state[to] += amt;
+    }
+    sum_top_three(&state)
+}
 
-        if balances[from] < amt {
-            debts.push((from, to, amt - balances[from]));
-            amt = balances[from];
+fn solve_part2() -> i16 {
+    let input = include_str!("input.txt");
+    let (balances_str, transactions_str) = input.split_once("\n\n").unwrap();
+
+    let mut state = [0i16; NUM_NAMES];
+    for line in balances_str.lines() {
+        let (i, bal) = parse_balance_line(line);
+        state[i] = bal;
+    }
+    for line in transactions_str.lines() {
+        let (from, to, raw_amt) = parse_txn_line(line);
+        let amt = min(raw_amt, state[from]);
+        state[from] -= amt;
+        state[to] += amt;
+    }
+    sum_top_three(&state)
+}
+
+fn solve_part3() -> i16 {
+    let input = include_str!("input.txt");
+    let (balances_str, transactions_str) = input.split_once("\n\n").unwrap();
+
+    let mut state = [0i16; NUM_NAMES];
+    for line in balances_str.lines() {
+        let (i, bal) = parse_balance_line(line);
+        state[i] = bal;
+    }
+    let mut debts: Vec<(usize, usize, i16)> = Vec::new();
+
+    for line in transactions_str.lines() {
+        let (from, to, mut amt) = parse_txn_line(line);
+        if state[from] < amt {
+            debts.push((from, to, amt - state[from]));
+            amt = state[from];
         }
+        state[from] -= amt;
+        state[to] += amt;
 
-        balances.entry(from).and_modify(|bal| *bal -= amt);
-        balances.entry(to).and_modify(|bal| *bal += amt);
-
-        while let Some((from, to, amt)) = debts.iter_mut().filter(|(from, _, _)| balances[from] > 0).next() {
-            let can_return = std::cmp::min(*amt, balances[from]);
-            balances.entry(from).and_modify(|bal| *bal -= can_return);
-            balances.entry(to).and_modify(|bal| *bal += can_return);
-            *amt -= can_return;
-
-            debts.retain(|(_, _, amt)| *amt > 0);
+        while let Some((debt_from, debt_to, debt_amt)) =
+            debts.iter_mut().find(|(from, _, _)| state[*from] > 0)
+        {
+            let can_return = min(*debt_amt, state[*debt_from]);
+            state[*debt_from] -= can_return;
+            state[*debt_to] += can_return;
+            *debt_amt -= can_return;
+            debts.retain(|&(_, _, amt)| amt > 0);
         }
-    });
-
-    let mut m = balances.values().copied().collect::<Vec<_>>();
-    m.sort_unstable();
-    m.into_iter().rev().take(3).sum::<i64>()
+    }
+    sum_top_three(&state)
 }
 
 fn main() {
