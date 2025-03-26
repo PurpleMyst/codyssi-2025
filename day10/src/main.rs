@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 const SIDE: usize = 50;
 
 fn parse(input: &str) -> [u8; SIDE * SIDE] {
@@ -31,7 +29,7 @@ fn solve_part1(input: &str) -> impl std::fmt::Display {
     result
 }
 
-fn solve_part2(input: &str) -> impl std::fmt::Display {
+fn solve_part23<const TARGET_SIDE: usize>(input: &str) -> impl std::fmt::Display {
     let grid = parse(input);
 
     u64::from(grid[0])
@@ -39,33 +37,13 @@ fn solve_part2(input: &str) -> impl std::fmt::Display {
             &(0, 0),
             |&(x, y)| {
                 [
-                    ((x + 1) < 15).then(|| ((x + 1, y), u64::from(grid[(x + 1) * SIDE + y]))),
-                    ((y + 1) < 15).then(|| ((x, y + 1), u64::from(grid[x * SIDE + y + 1]))),
+                    ((x + 1) < TARGET_SIDE).then(|| ((x + 1, y), u64::from(grid[(x + 1) * SIDE + y]))),
+                    ((y + 1) < TARGET_SIDE).then(|| ((x, y + 1), u64::from(grid[x * SIDE + y + 1]))),
                 ]
                 .into_iter()
                 .flatten()
             },
-            |&(x, y)| x == 14 && y == 14,
-        )
-        .unwrap()
-        .1
-}
-
-fn solve_part3(input: &str) -> impl std::fmt::Display {
-    let grid = parse(input);
-
-    u64::from(grid[0])
-        + pathfinding::prelude::dijkstra(
-            &(0, 0),
-            |&(x, y)| {
-                [
-                    ((x + 1) < SIDE).then(|| ((x + 1, y), u64::from(grid[(x + 1) * SIDE + y]))),
-                    ((y + 1) < SIDE).then(|| ((x, y + 1), u64::from(grid[x * SIDE + y + 1]))),
-                ]
-                .into_iter()
-                .flatten()
-            },
-            |&(x, y)| x == (SIDE - 1) && y == (SIDE - 1),
+            |&(x, y)| x == (TARGET_SIDE - 1) && y == (TARGET_SIDE - 1),
         )
         .unwrap()
         .1
@@ -74,6 +52,6 @@ fn solve_part3(input: &str) -> impl std::fmt::Display {
 fn main() {
     let input = include_str!("input.txt");
     println!("{}", solve_part1(input));
-    println!("{}", solve_part2(input));
-    println!("{}", solve_part3(input));
+    println!("{}", solve_part23::<15>(input));
+    println!("{}", solve_part23::<SIDE>(input));
 }
