@@ -35,8 +35,8 @@ fn max_row_or_col_sum(grid: [i64; SIDE * SIDE]) -> i64 {
         let mut col_sum = 0;
         let mut row_sum = 0;
         for j in 0..SIDE {
-            col_sum = col_sum + grid[j * SIDE + i];
-            row_sum = row_sum + grid[i * SIDE + j];
+            col_sum += grid[j * SIDE + i];
+            row_sum += grid[i * SIDE + j];
         }
         part1 = part1.max(col_sum).max(row_sum);
     }
