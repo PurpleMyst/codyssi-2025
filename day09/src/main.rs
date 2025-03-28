@@ -96,9 +96,7 @@ fn solve_part3() -> i16 {
         state[from] -= amt;
         state[to] += amt;
 
-        while let Some((debt_from, debt_to, debt_amt)) =
-            debts.iter_mut().find(|(from, _, _)| state[*from] > 0)
-        {
+        while let Some((debt_from, debt_to, debt_amt)) = debts.iter_mut().find(|(from, _, _)| state[*from] > 0) {
             let can_return = min(*debt_amt, state[*debt_from]);
             state[*debt_from] -= can_return;
             state[*debt_to] += can_return;

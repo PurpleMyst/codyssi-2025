@@ -9,16 +9,19 @@ fn main() {
     let (instructions, flow) = instructions_and_flow.split_once("\n\n").unwrap();
 
     let mut grid = [0i64; SIDE * SIDE];
-    grid_values.split_ascii_whitespace().zip(grid.iter_mut()).for_each(|(value, cell)| {
-        *cell = value.parse().unwrap();
-    });
+    grid_values
+        .split_ascii_whitespace()
+        .zip(grid.iter_mut())
+        .for_each(|(value, cell)| {
+            *cell = value.parse().unwrap();
+        });
 
     solve_part1(instructions, grid);
     solve_part2(instructions, flow, grid);
     solve_part3(instructions, flow, grid);
 }
 
-fn solve_part1(instructions: &str, mut grid: [i64; SIDE*SIDE]) {
+fn solve_part1(instructions: &str, mut grid: [i64; SIDE * SIDE]) {
     for instruction in instructions.lines() {
         exec(instruction, &mut grid);
     }
@@ -26,7 +29,7 @@ fn solve_part1(instructions: &str, mut grid: [i64; SIDE*SIDE]) {
     println!("{}", max_row_or_col_sum(grid));
 }
 
-fn max_row_or_col_sum(grid: [i64; SIDE*SIDE]) -> i64 {
+fn max_row_or_col_sum(grid: [i64; SIDE * SIDE]) -> i64 {
     let mut part1 = i64::MIN;
     for i in 0..SIDE {
         let mut col_sum = 0;
@@ -40,7 +43,7 @@ fn max_row_or_col_sum(grid: [i64; SIDE*SIDE]) -> i64 {
     part1
 }
 
-fn solve_part2(instructions: &str, flow: &str, mut grid: [i64; SIDE*SIDE]) {
+fn solve_part2(instructions: &str, flow: &str, mut grid: [i64; SIDE * SIDE]) {
     let mut instructions = instructions.lines().collect::<VecDeque<_>>();
     let mut queue = VecDeque::new();
 
@@ -61,27 +64,27 @@ fn solve_part2(instructions: &str, flow: &str, mut grid: [i64; SIDE*SIDE]) {
     println!("{}", max_row_or_col_sum(grid));
 }
 
-fn solve_part3(instructions: &str, flow: &str, mut grid: [i64; SIDE*SIDE]) {
+fn solve_part3(instructions: &str, flow: &str, mut grid: [i64; SIDE * SIDE]) {
     let mut instructions = instructions.lines().collect::<VecDeque<_>>();
     let mut queue = VecDeque::new();
 
     'mainloop: loop {
-    for action in flow.lines() {
-        if instructions.is_empty() && queue.is_empty() {
-            break 'mainloop;
-        }
-        match action {
-            "TAKE" => queue.push_back(instructions.pop_front().unwrap()),
-            "CYCLE" => {
-                instructions.push_back(queue.pop_front().unwrap());
+        for action in flow.lines() {
+            if instructions.is_empty() && queue.is_empty() {
+                break 'mainloop;
             }
-            "ACT" => {
-                let instruction = queue.pop_front().unwrap();
-                exec(instruction, &mut grid);
+            match action {
+                "TAKE" => queue.push_back(instructions.pop_front().unwrap()),
+                "CYCLE" => {
+                    instructions.push_back(queue.pop_front().unwrap());
+                }
+                "ACT" => {
+                    let instruction = queue.pop_front().unwrap();
+                    exec(instruction, &mut grid);
+                }
+                _ => unreachable!(),
             }
-            _ => unreachable!(),
         }
-    }
     }
 
     println!("{}", max_row_or_col_sum(grid));
@@ -100,13 +103,21 @@ fn exec(instruction: &str, grid: &mut [i64; SIDE * SIDE]) {
                 "ROW" => grid[idx * SIDE..(idx + 1) * SIDE].rotate_right(shift),
                 "COL" => {
                     let mut buffer = [0i64; SIDE];
-                    grid.iter().skip(idx).step_by(SIDE).zip(buffer.iter_mut()).for_each(|(cell, buffer)| {
-                        *buffer = *cell;
-                    });
+                    grid.iter()
+                        .skip(idx)
+                        .step_by(SIDE)
+                        .zip(buffer.iter_mut())
+                        .for_each(|(cell, buffer)| {
+                            *buffer = *cell;
+                        });
                     buffer.rotate_right(shift);
-                    grid.iter_mut().skip(idx).step_by(SIDE).zip(buffer.iter_mut()).for_each(|(cell, buffer)| {
-                        *cell = *buffer;
-                    });
+                    grid.iter_mut()
+                        .skip(idx)
+                        .step_by(SIDE)
+                        .zip(buffer.iter_mut())
+                        .for_each(|(cell, buffer)| {
+                            *cell = *buffer;
+                        });
                 }
                 _ => unreachable!(),
             }
@@ -163,7 +174,7 @@ fn exec(instruction: &str, grid: &mut [i64; SIDE * SIDE]) {
                     *cell = (*cell * amount).rem_euclid(MODULO);
                 }),
                 "ROW" => {
-                    let idx = words.next().unwrap().parse::<usize>().unwrap() -1;
+                    let idx = words.next().unwrap().parse::<usize>().unwrap() - 1;
                     grid[idx * SIDE..(idx + 1) * SIDE].iter_mut().for_each(|cell| {
                         *cell = (*cell * amount).rem_euclid(MODULO);
                     });
