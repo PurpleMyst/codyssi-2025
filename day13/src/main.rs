@@ -31,10 +31,15 @@ fn main() {
     input.lines().for_each(|line| {
         let (edge, weight) = line.split_once(" | ").unwrap();
         let (from, to) = edge.split_once(" -> ").unwrap();
-        paths.entry(from).or_insert_with(Vec::new).push((to, weight.parse::<u64>().unwrap()));
+        paths
+            .entry(from)
+            .or_insert_with(Vec::new)
+            .push((to, weight.parse::<u64>().unwrap()));
     });
 
-    let part1_paths = dijkstra_all(&"STT", |current| paths.get(current).unwrap().iter().map(|(next, _)| (*next, 1)));
+    let part1_paths = dijkstra_all(&"STT", |current| {
+        paths.get(current).unwrap().iter().map(|(next, _)| (*next, 1))
+    });
     let mut part1_costs = part1_paths.values().map(|(_, c)| c).collect::<Vec<_>>();
     part1_costs.sort_unstable();
     let part1 = part1_costs.into_iter().rev().take(3).product::<u64>();
@@ -46,6 +51,10 @@ fn main() {
     let part2 = part2_costs.into_iter().rev().take(3).product::<u64>();
     println!("{part2}");
 
-    let part3 = paths.keys().map(|node| longest_cycle_starting_from(&paths, node)).max().unwrap();
+    let part3 = paths
+        .keys()
+        .map(|node| longest_cycle_starting_from(&paths, node))
+        .max()
+        .unwrap();
     println!("{part3}");
 }
