@@ -1,6 +1,4 @@
-use std::{cmp::Reverse, ops::Add};
-
-use scan_fmt::scan_fmt;
+use std::{cmp::Reverse, mem::swap, ops::Add};
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq)]
 struct Item {
@@ -9,12 +7,7 @@ struct Item {
     unique_materials: usize,
 }
 
-fn knapsack(items: &'static [Item], money: usize) -> usize {
-    let n = items.len();
-
-    #[allow(non_snake_case)]
-    let W = money;
-
+fn knapsack(items: &[Item], money: usize) -> usize {
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Debug)]
     struct Value {
         quality: usize,
@@ -32,8 +25,8 @@ fn knapsack(items: &'static [Item], money: usize) -> usize {
         }
     }
 
-    impl From<Item> for Value {
-        fn from(item: Item) -> Self {
+    impl From<&Item> for Value {
+        fn from(item: &Item) -> Self {
             Self {
                 quality: item.quality,
                 unique_materials: Reverse(item.unique_materials),
@@ -41,20 +34,21 @@ fn knapsack(items: &'static [Item], money: usize) -> usize {
         }
     }
 
-    let mut m = vec![vec![Value::default(); W + 1]; n + 1];
+    let mut prev = vec![Value::default(); money + 1];
+    let mut next = vec![Value::default(); money + 1];
 
-    for i in 1..=n {
+    for item in items {
         for j in 1..=money {
-            let item = items[i - 1];
             if item.cost > j {
-                m[i][j] = m[i - 1][j];
+                next[j] = prev[j];
             } else {
-                m[i][j] = m[i - 1][j].max(m[i - 1][j - item.cost] + Value::from(item));
+                next[j] = prev[j].max(prev[j - item.cost] + Value::from(item));
             }
         }
+        swap(&mut prev, &mut next);
     }
 
-    let sol = m[n][W];
+    let sol = prev[money];
     sol.quality * sol.unique_materials.0
 }
 
@@ -64,18 +58,16 @@ fn main() {
     let mut items = input
         .lines()
         .map(|line| {
-            scan_fmt!(
-                line,
-                "{d} {} | Quality : {d}, Cost : {d}, Unique Materials : {d}",
-                usize,
-                String,
-                usize,
-                usize,
-                usize
-            )
-            .unwrap()
+            let mut it = line
+                .split_once(" | ")
+                .unwrap()
+                .1
+                .split(", ")
+                .map(|part| part.split_once(": ").unwrap().1.parse().unwrap());
+
+            (it.next().unwrap(), it.next().unwrap(), it.next().unwrap())
         })
-        .map(|(_id, _name, quality, cost, unique_materials)| Item {
+        .map(|(quality, cost, unique_materials)| Item {
             quality,
             cost,
             unique_materials,
@@ -83,8 +75,6 @@ fn main() {
         .collect::<Vec<_>>();
 
     items.sort_by_key(|item| (item.quality, item.cost));
-
-    let items = items.leak();
 
     let part1 = items
         .iter()
@@ -94,9 +84,9 @@ fn main() {
         .sum::<usize>();
     println!("{part1}");
 
-    let part2 = knapsack(items, 30);
+    let part2 = knapsack(&items, 30);
     println!("{part2}");
 
-    let part3 = knapsack(items, 300);
+    let part3 = knapsack(&items, 300);
     println!("{part3}");
 }
