@@ -60,7 +60,7 @@ fn main() {
     let mut nodes = lines
         .by_ref()
         .take_while(|line| !line.is_empty())
-        .map(|line| parse_node(line));
+        .map(parse_node);
 
     let (root_id, root_value) = nodes.next().unwrap();
     let mut arena = Arena::new();
@@ -76,13 +76,11 @@ fn main() {
                     arena[current].left = Some(arena.insert(Tree::new_leaf(code, id, Some(current))));
                     break;
                 }
+            } else if let Some(right) = arena[current].right {
+                current = right;
             } else {
-                if let Some(right) = arena[current].right {
-                    current = right;
-                } else {
-                    arena[current].right = Some(arena.insert(Tree::new_leaf(code, id, Some(current))));
-                    break;
-                }
+                arena[current].right = Some(arena.insert(Tree::new_leaf(code, id, Some(current))));
+                break;
             }
         }
     }
