@@ -57,10 +57,7 @@ fn main() {
     let input = include_str!("input.txt");
 
     let mut lines = input.lines();
-    let mut nodes = lines
-        .by_ref()
-        .take_while(|line| !line.is_empty())
-        .map(parse_node);
+    let mut nodes = lines.by_ref().take_while(|line| !line.is_empty()).map(parse_node);
 
     let (root_id, root_value) = nodes.next().unwrap();
     let mut arena = Arena::new();
