@@ -1,0 +1,352 @@
+#![allow(dead_code)]
+
+const SIDE: usize = 80;
+use itertools::Itertools;
+use noisy_float::prelude::r64;
+use std::iter::once;
+
+use nalgebra::{UnitQuaternion, Vector3};
+
+type N = f64;
+
+// Cube net:
+//  U
+// LFR
+//  D
+//  B
+const U: usize = 0;
+const F: usize = 1;
+const D: usize = 2;
+const B: usize = 3;
+const L: usize = 4;
+const R: usize = 5;
+
+const FACES: usize = R + 1;
+
+const BASE_X: [Vector3<N>; FACES] = [
+    Vector3::new(1.0, 0.0, 0.0),  // U (Reads Global +X)
+    Vector3::new(1.0, 0.0, 0.0),  // F (Reads Global +X)
+    Vector3::new(1.0, 0.0, 0.0),  // D (Reads Global +X) - CHANGED
+    Vector3::new(-1.0, 0.0, 0.0), // B (Reads Global -X)
+    Vector3::new(0.0, 1.0, 0.0),  // L (Reads Global +Y) - CHANGED
+    Vector3::new(0.0, -1.0, 0.0), // R (Reads Global -Y) - CHANGED
+];
+
+const BASE_NORMALS: [Vector3<N>; FACES] = [
+    Vector3::new(0.0, 0.0, 1.0),  // U
+    Vector3::new(0.0, 1.0, 0.0), // F
+    Vector3::new(0.0, 0.0, -1.0), // D
+    Vector3::new(0.0, -1.0, 0.0),  // B
+    Vector3::new(-1.0, 0.0, 0.0), // L
+    Vector3::new(1.0, 0.0, 0.0),  // R
+];
+
+struct Cube {
+    normals: [Vector3<N>; FACES],
+    xs: [Vector3<N>; FACES],
+}
+
+impl Default for Cube {
+    fn default() -> Self {
+        Self {
+            normals: BASE_NORMALS,
+            xs: BASE_X,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum AngleBetween {
+    Zero,
+    Ninety,
+    OneEighty,
+    TwoSeventy,
+}
+
+#[allow(non_snake_case)]
+impl Cube {
+    fn twist_L(&mut self) {
+        let rotation = UnitQuaternion::rotation_between(&BASE_NORMALS[L], &BASE_NORMALS[U]).unwrap();
+
+        self.normals.iter_mut().for_each(|normal| {
+            *normal = rotation.transform_vector(normal);
+        });
+        self.xs.iter_mut().for_each(|x| {
+            *x = rotation.transform_vector(x);
+        });
+    }
+
+    fn twist_R(&mut self) {
+        for _ in 0..3 {
+            self.twist_L();
+        }
+    }
+
+    fn twist_U(&mut self) {
+        let rotation = UnitQuaternion::rotation_between(&BASE_NORMALS[F], &BASE_NORMALS[U]).unwrap();
+
+        self.normals.iter_mut().for_each(|normal| {
+            *normal = rotation.transform_vector(normal);
+        });
+        self.xs.iter_mut().for_each(|x| {
+            *x = rotation.transform_vector(x);
+        });
+    }
+
+    fn twist_D(&mut self) {
+        for _ in 0..3 {
+            self.twist_U();
+        }
+    }
+
+    fn current_face_idx(&self) -> usize {
+        self.normals
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, normal)| r64(normal.dot(&BASE_NORMALS[U])))
+            .unwrap()
+            .0
+    }
+
+    fn current_face_xy(&self) -> (Vector3<N>, Vector3<N>) {
+        let idx = self.current_face_idx();
+        let x = self.xs[idx];
+        (x, self.normals[idx].cross(&x))
+    }
+
+    fn current_face_angle_to_original(&self) -> AngleBetween {
+        let idx = self.current_face_idx();
+        let current_x = self.xs[idx];
+
+        if (current_x.dot(&Vector3::x_axis())).abs() < 1e-6 {
+            if current_x.dot(&Vector3::y_axis()) < 0.0 {
+                AngleBetween::TwoSeventy
+            } else {
+                AngleBetween::Ninety
+            }
+        } else {
+            if current_x.dot(&Vector3::x_axis()) < 0.0 {
+                AngleBetween::OneEighty
+            } else {
+                AngleBetween::Zero
+            }
+        }
+    }
+}
+
+fn clamp(mut x: i64) -> i64 {
+    while x > 100 {
+        x -= 100
+    }
+    x
+}
+
+fn dominant_sum(grid: &[Vec<i64>]) -> i64 {
+    let mut row_sum = i64::MIN;
+    let mut col_sum = i64::MIN;
+
+    let side = grid.len();
+
+    for i in 0..side {
+        let mut this_row_sum = 0;
+        let mut this_col_sum = 0;
+
+        for j in 0..side {
+            this_row_sum += grid[i][j];
+            this_col_sum += grid[j][i];
+        }
+
+        row_sum = row_sum.max(this_row_sum);
+        col_sum = col_sum.max(this_col_sum);
+    }
+
+    row_sum.max(col_sum)
+}
+
+fn do_solve<const SIDE: usize>(input: &str) -> (i64, u128) {
+    let (instructions, twists) = input.split_once("\n\n").unwrap();
+
+    let mut cube = Cube::default();
+    let mut absorption = [0i64; 6];
+
+    let mut grids = vec![vec![vec![1; SIDE]; SIDE]; FACES];
+
+    for (instruction, twist) in instructions.lines().zip(twists.trim().bytes().chain(once(b' '))) {
+        let (target, value) = instruction.split_once(" - ").unwrap();
+        let value = value.split_once(' ').unwrap().1.parse::<i64>().unwrap();
+
+        let power = value as i64
+            * (if target == "FACE" {
+                SIDE as i64 * SIDE as i64
+            } else {
+                SIDE as i64
+            });
+
+        absorption[cube.current_face_idx()] += power;
+
+        let mut target_words = target.split(' ');
+        let target = target_words.next().unwrap();
+        let mut coord = target_words
+            .next()
+            .and_then(|s| s.parse::<usize>().ok())
+            .map(|i| i - 1)
+            .unwrap_or(0);
+        let a = cube.current_face_angle_to_original();
+
+        if matches!((target, a), ("ROW", AngleBetween::OneEighty) | ("COL", AngleBetween::TwoSeventy)) {
+            coord = (SIDE - 1) - coord;
+        }
+
+        match (target, a == AngleBetween::Ninety || a == AngleBetween::TwoSeventy) {
+            ("FACE", _) => {
+                grids[cube.current_face_idx()]
+                    .iter_mut()
+                    .for_each(|row| row.iter_mut().for_each(|cell| *cell = clamp(*cell + value)));
+            }
+            ("ROW", false) | ("COL", true) => {
+                for i in 0..SIDE {
+                    grids[cube.current_face_idx()][coord][i] = clamp(grids[cube.current_face_idx()][coord][i] + value);
+                }
+            }
+            ("COL", false) | ("ROW", true) => {
+                for i in 0..SIDE {
+                    grids[cube.current_face_idx()][i][coord] = clamp(grids[cube.current_face_idx()][i][coord] + value);
+                }
+            }
+            _ => unreachable!(),
+        }
+
+        // let (x, y) = cube.current_face_xy();
+        // eprintln!("{instruction:23}: {:?} => {x:+.2?} {y:+.2?}", b"UDLRFB"[cube.current_face_idx()] as char);
+
+        match twist {
+            b'R' => cube.twist_R(),
+            b'L' => cube.twist_L(),
+            b'U' => cube.twist_U(),
+            b'D' => cube.twist_D(),
+            b' ' => (),
+            _ => unreachable!(),
+        }
+
+        println!(
+            "{instruction} > {} > {}",
+            grids.iter().map(|grid| dominant_sum(&grid) as u128).product::<u128>(),
+            grids
+                .iter()
+                .map(|grid| dominant_sum(&grid) as u128)
+                .sorted_unstable()
+                .rev()
+                .map(|s| s.to_string())
+                .collect_vec()
+                .join(",")
+        )
+    }
+
+    absorption.sort_unstable();
+    let part1 = absorption.into_iter().rev().take(2).product::<i64>();
+
+    let part2 = grids
+        .into_iter()
+        .map(|grid| dominant_sum(&grid) as u128)
+        .product::<u128>();
+
+    (part1, part2)
+}
+
+fn main() {
+    let input = include_str!("input.txt");
+    let (part1, part2) = do_solve::<80>(input);
+    println!("{part1}");
+    println!("{part2}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_3x3() {
+        let input = include_str!("sample_input_3x3.txt");
+        let (p1, p2) = do_solve::<3>(input);
+        assert_eq!(p1, 201474);
+        assert_eq!(p2, 118727856);
+    }
+
+    #[test]
+    fn test_sample() {
+        let input = include_str!("sample_input.txt");
+        let (p1, p2) = do_solve::<80>(input);
+        assert_eq!(p1, 6902016000);
+        assert_eq!(p2, 369594451623936000000);
+    }
+
+    #[test]
+    fn test_ec1() {
+        let input = include_str!("ec_input.txt");
+        let (_p1, p2) = do_solve::<80>(input);
+        assert_eq!(p2, 41477439119464857600000);
+    }
+
+    #[test]
+    fn test_ec2() {
+        let input = include_str!("ec_input2.txt");
+        let (_p1, p2) = do_solve::<80>(input);
+        assert_eq!(p2, 27223044405703882350160);
+    }
+
+    #[test]
+    fn test_uld() {
+        let input = concat!(
+            "ROW 2 - VALUE 10\n",
+            "FACE - VALUE 0\n",
+            "FACE - VALUE 0\n",
+            "COL 2 - VALUE 10\n",
+            "\n",
+            "ULD\n",
+        );
+        let (_p1, p2) = do_solve::<80>(input);
+        assert_eq!(p2, 11 * 80 * (1 * 80u128).pow(5));
+    }
+
+    #[test]
+    fn test_uld2() {
+        let input = concat!(
+            "ROW 2 - VALUE 10\n",
+            "FACE - VALUE 0\n",
+            "FACE - VALUE 0\n",
+            "COL 79 - VALUE 10\n",
+            "\n",
+            "ULD\n",
+        );
+        let (_p1, p2) = do_solve::<80>(input);
+        assert_eq!(p2, 21 * 80 * (1 * 80u128).pow(5));
+    }
+
+    #[test]
+    fn test_dlu() {
+        let input = concat!(
+            "ROW 2 - VALUE 10\n",
+            "FACE - VALUE 0\n",
+            "FACE - VALUE 0\n",
+            "COL 2 - VALUE 10\n",
+            "\n",
+            "DLU\n",
+        );
+        let (_p1, p2) = do_solve::<80>(input);
+        assert_eq!(p2, 21 * 80 * (1 * 80u128).pow(5));
+    }
+
+    #[test]
+    fn test_dlu2() {
+        let input = concat!(
+            "ROW 2 - VALUE 10\n",
+            "FACE - VALUE 0\n",
+            "FACE - VALUE 0\n",
+            "COL 79 - VALUE 10\n",
+            "\n",
+            "DLU\n",
+        );
+        let (_p1, p2) = do_solve::<80>(input);
+        assert_eq!(p2, 11 * 80 * (1 * 80u128).pow(5));
+    }
+}
