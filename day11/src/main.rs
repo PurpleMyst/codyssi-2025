@@ -1,8 +1,8 @@
 fn value(c: u8) -> u64 {
     match c {
-        b'0'..=b'9' => (c - b'0') as u64,
-        b'A'..=b'Z' => (c - b'A' + 10) as u64,
-        b'a'..=b'z' => (c - b'a' + 36) as u64,
+        b'0'..=b'9' => u64::from(c - b'0'),
+        b'A'..=b'Z' => u64::from(c - b'A' + 10),
+        b'a'..=b'z' => u64::from(c - b'a' + 36),
         _ => unreachable!(),
     }
 }

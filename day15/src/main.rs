@@ -23,8 +23,8 @@ impl Tree {
     }
 
     fn height(&self, arena: &Arena) -> usize {
-        let left_height = self.left.map(|idx| arena[idx].height(arena)).unwrap_or(0);
-        let right_height = self.right.map(|idx| arena[idx].height(arena)).unwrap_or(0);
+        let left_height = self.left.map_or(0, |idx| arena[idx].height(arena));
+        let right_height = self.right.map_or(0, |idx| arena[idx].height(arena));
         1 + left_height.max(right_height)
     }
 

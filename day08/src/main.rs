@@ -23,7 +23,7 @@ fn reduce_part3(line: &str) -> usize {
 fn main() {
     let input = include_str!("input.txt");
 
-    let part1 = input.bytes().filter(|b| b.is_ascii_alphabetic()).count();
+    let part1 = input.bytes().filter(u8::is_ascii_alphabetic).count();
     println!("{part1}");
 
     let part2 = input.lines().map(reduce_part2).sum::<usize>();

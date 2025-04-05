@@ -16,7 +16,7 @@ fn rle(s: &str) -> String {
             n += 1;
         } else {
             if n > 0 {
-                result.push_str(&format!("{}", n));
+                result.push_str(&format!("{n}"));
             }
             result.push(last as char);
             last = c;
@@ -24,7 +24,7 @@ fn rle(s: &str) -> String {
         }
     }
     if n > 0 {
-        result.push_str(&format!("{}", n));
+        result.push_str(&format!("{n}"));
         result.push(last as char);
     }
     result

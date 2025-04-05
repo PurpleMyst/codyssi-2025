@@ -9,7 +9,7 @@ fn value(b: u8) -> u64 {
 fn main() {
     let input = include_str!("input.txt").trim();
 
-    let part1 = input.bytes().filter(|b| b.is_ascii_alphabetic()).count();
+    let part1 = input.bytes().filter(u8::is_ascii_alphabetic).count();
     println!("{part1}");
 
     let part2 = input.bytes().map(value).sum::<u64>();

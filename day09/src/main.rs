@@ -26,7 +26,7 @@ fn sum_top_three(balances: &[i16; NUM_NAMES]) -> i16 {
     let mut top1 = i16::MIN;
     let mut top2 = i16::MIN;
     let mut top3 = i16::MIN;
-    for &bal in balances.iter() {
+    for &bal in balances {
         if bal > top1 {
             top3 = top2;
             top2 = top1;

@@ -22,8 +22,8 @@ fn make_grid() -> Grid<u8> {
 
 fn dominant_sum(grid: &Grid<u8>) -> u16 {
     grid.iter_rows()
-        .map(|row| row.map(|&x| x as u16).sum::<u16>())
-        .chain(grid.iter_cols().map(|col| col.map(|&x| x as u16).sum::<u16>()))
+        .map(|row| row.map(|&x| u16::from(x)).sum::<u16>())
+        .chain(grid.iter_cols().map(|col| col.map(|&x| u16::from(x)).sum::<u16>()))
         .max()
         .unwrap_or(0)
 }
@@ -113,7 +113,7 @@ impl Cube {
         let (target_type, target_idx) = target_str.split_once(' ').unwrap_or((target_str, "1"));
         let target_idx = target_idx.parse::<usize>().unwrap() - 1;
 
-        let absorption_increment = value as u32
+        let absorption_increment = u32::from(value)
             * match target_type {
                 "FACE" => (SIDE as u32).pow(2),
                 "ROW" | "COL" => SIDE as u32,
@@ -123,7 +123,7 @@ impl Cube {
 
         match target_type {
             "FACE" => {
-                for val in self.grids_part2[current_face_idx].iter_mut() {
+                for val in &mut self.grids_part2[current_face_idx] {
                     *val = clamp(*val + value);
                 }
             }
@@ -141,14 +141,14 @@ impl Cube {
                     *val = clamp(*val + value);
                 }
             }
-            _ => panic!("Unknown instruction target type for grid update: {}", target_type),
+            _ => panic!("Unknown instruction target type for grid update: {target_type}"),
         }
 
         // --- Part 3: Grid Update with Twists (grids_part3) ---
         match target_type {
             "FACE" => {
                 // No twists needed, just update the current face grid
-                for val in self.grids_part3[current_face_idx].iter_mut() {
+                for val in &mut self.grids_part3[current_face_idx] {
                     *val = clamp(*val + value);
                 }
             }
@@ -208,12 +208,12 @@ fn main() {
 
     let mut sorted_absorption = cube.absorption;
     sorted_absorption.sort_unstable();
-    let part1: u64 = sorted_absorption.into_iter().rev().take(2).map(|n| n as u64).product();
-    println!("{}", part1);
+    let part1: u64 = sorted_absorption.into_iter().rev().take(2).map(u64::from).product();
+    println!("{part1}");
 
-    let part2: u128 = cube.grids_part2.iter().map(|grid| dominant_sum(grid) as u128).product();
-    println!("{}", part2);
+    let part2: u128 = cube.grids_part2.iter().map(|grid| u128::from(dominant_sum(grid))).product();
+    println!("{part2}");
 
-    let part3: u128 = cube.grids_part3.iter().map(|grid| dominant_sum(grid) as u128).product();
-    println!("{}", part3);
+    let part3: u128 = cube.grids_part3.iter().map(|grid| u128::from(dominant_sum(grid))).product();
+    println!("{part3}");
 }

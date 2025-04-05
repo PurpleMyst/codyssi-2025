@@ -70,7 +70,7 @@ pub(crate) struct ProblemStatement {
     pub(crate) allowed_moves: Vec<u8>,
 }
 
-/// Load a problem statement, returning the N in S1_N and all the branching staircases.
+/// Load a problem statement, returning the N in `S1_N` and all the branching staircases.
 pub(crate) fn load_input(input: &str) -> ProblemStatement {
     let mut ls = input.lines();
     let allowed_moves = ls
