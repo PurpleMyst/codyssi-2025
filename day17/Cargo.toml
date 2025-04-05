@@ -4,3 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+arboard = "3.5.0"
+memoize = "0.5.1"
+petgraph = "0.7.1"
+rustc-hash = "2.1.1"
+
+[dev-dependencies]
+proptest = "1.6.0"
