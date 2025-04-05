@@ -93,7 +93,7 @@ pub(crate) fn load_input(input: &str) -> ProblemStatement {
 
     for l in ls.take_while(|l| !l.is_empty()) {
         let mut it = l.split_ascii_whitespace();
-        let name = it.nth(0).unwrap();
+        let name = it.next().unwrap();
         let start = it.nth(1).unwrap().parse().unwrap();
         let end = it.nth(1).unwrap().parse().unwrap();
         let feeding = it.nth(2).unwrap();

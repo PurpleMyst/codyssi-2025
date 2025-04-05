@@ -110,7 +110,7 @@ impl Cube {
 
         let current_face_idx = self.current_face();
 
-        let (target_type, target_idx) = target_str.split_once(' ').unwrap_or_else(|| (target_str, "1"));
+        let (target_type, target_idx) = target_str.split_once(' ').unwrap_or((target_str, "1"));
         let target_idx = target_idx.parse::<usize>().unwrap() - 1;
 
         let absorption_increment = value as u32
