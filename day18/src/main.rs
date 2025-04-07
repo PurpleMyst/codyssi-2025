@@ -6,6 +6,7 @@ use pathfinding::prelude::*;
 use rayon::prelude::*;
 
 type N = i16;
+type Vec3 = (N, N, N);
 type Vec4 = (N, N, N, N);
 
 const X_SIZE: N = 10;
@@ -13,10 +14,11 @@ const Y_SIZE: N = 15;
 const Z_SIZE: N = 60;
 const W_SIZE: N = 3;
 
-const SPACE_SIZE: usize = X_SIZE as usize * Y_SIZE as usize * Z_SIZE as usize * W_SIZE as usize;
+const SPACE_SIZE_4D: usize = X_SIZE as usize * Y_SIZE as usize * Z_SIZE as usize * W_SIZE as usize;
+const SPACE_SIZE_3D: usize = X_SIZE as usize * Y_SIZE as usize * Z_SIZE as usize;
 
-const INITIAL_POSITION: Vec4 = (0, 0, 0, 0);
-const TARGET_POSITION: Vec4 = (9, 14, 59, 0);
+const INITIAL_POSITION: Vec3 = (0, 0, 0);
+const TARGET_POSITION: Vec3 = (9, 14, 59);
 
 struct Rule {
     coeffs: Vec4,
@@ -41,22 +43,30 @@ impl DebrisPiece {
     }
 }
 
-fn vec4_to_idx((x, y, z, w): Vec4) -> usize {
-    (x * Y_SIZE * Z_SIZE * W_SIZE) as usize + (y * Z_SIZE * W_SIZE) as usize + (z * W_SIZE) as usize + (w + 1) as usize
+fn vec4_to_vec3((x, y, z, w): Vec4) -> Option<Vec3> {
+    (w == 0).then_some((x, y, z))
+}
+
+fn vec3_to_idx((x, y, z): Vec3) -> usize {
+    (x * Y_SIZE * Z_SIZE) as usize + (y * Z_SIZE) as usize + z as usize
 }
 
 fn construct_bitset(debris: &[DebrisPiece], t: N) -> FixedBitSet {
-    let mut bitset = FixedBitSet::with_capacity(SPACE_SIZE);
+    let mut bitset = FixedBitSet::with_capacity(SPACE_SIZE_4D);
     for piece in debris {
-        bitset.set(vec4_to_idx(piece.position_at(t)), true);
+        if let Some(p) = vec4_to_vec3(piece.position_at(t)) {
+            bitset.set(vec3_to_idx(p), true);
+        }
     }
     bitset
 }
 
-fn construct_debris_map(debris: &[DebrisPiece], t: N) -> [u8; SPACE_SIZE] {
-    let mut debris_map = [0; SPACE_SIZE];
+fn construct_debris_map(debris: &[DebrisPiece], t: N) -> [u8; SPACE_SIZE_3D] {
+    let mut debris_map = [0; SPACE_SIZE_3D];
     for piece in debris {
-        debris_map[vec4_to_idx(piece.position_at(t))] += 1;
+        if let Some(p) = vec4_to_vec3(piece.position_at(t)) {
+            debris_map[vec3_to_idx(p)] += 1;
+        }
     }
     debris_map
 }
@@ -82,11 +92,6 @@ impl Debug for Rule {
 
 impl Rule {
     fn from_str(s: &str) -> Self {
-        // RULE N: Ax+By+Cz+Da DIVIDE M HAS REMAINDER N | DEBRIS VELOCITY (X, Y, Z, W)
-        // A, B, C, D = coeffs
-        // M = modulus
-        // N = remainder
-        // X, Y, Z, W = debris_velocity
         let parts: [_; 12] = s.splitn(12, ' ').collect_array().unwrap();
         let mut parts = parts.into_iter();
 
@@ -133,11 +138,10 @@ fn feasible_space() -> impl Iterator<Item = Vec4> {
     itertools::iproduct!(0..X_SIZE, 0..Y_SIZE, 0..Z_SIZE, -W_SIZE / 2..=W_SIZE / 2)
 }
 
-fn in_bounds((x, y, z, w): Vec4) -> bool {
+fn in_bounds((x, y, z): Vec3) -> bool {
     (0..X_SIZE).contains(&x)
         && (0..Y_SIZE).contains(&y)
         && (0..Z_SIZE).contains(&z)
-        && (-W_SIZE / 2..=W_SIZE / 2).contains(&w)
 }
 
 fn solve_part2<const MAX_T: N>(debris: &[DebrisPiece]) -> impl std::fmt::Display {
@@ -148,23 +152,23 @@ fn solve_part2<const MAX_T: N>(debris: &[DebrisPiece]) -> impl std::fmt::Display
 
     astar(
         &(INITIAL_POSITION, 0),
-        |&((x, y, z, w), t)| {
+        |&((x, y, z), t)| {
             let debris_at_t = &debris_positions[t + 1];
 
             let neighbors = [
-                (x, y, z, w),
-                (x + 1, y, z, w),
-                (x - 1, y, z, w),
-                (x, y + 1, z, w),
-                (x, y - 1, z, w),
-                (x, y, z - 1, w),
-                (x, y, z + 1, w),
+                (x, y, z),
+                (x + 1, y, z),
+                (x - 1, y, z),
+                (x, y + 1, z),
+                (x, y - 1, z),
+                (x, y, z - 1),
+                (x, y, z + 1),
             ];
 
             neighbors
                 .into_iter()
                 .filter(|&p| in_bounds(p))
-                .filter(|&p| p == INITIAL_POSITION || !debris_at_t.contains(vec4_to_idx(p)))
+                .filter(|&p| p == INITIAL_POSITION || !debris_at_t.contains(vec3_to_idx(p)))
                 .filter_map(move |p| Some(((p, t + 1), 1)))
         },
         |&(p, _)| p.0.abs_diff(TARGET_POSITION.0) + p.1.abs_diff(TARGET_POSITION.1) + p.2.abs_diff(TARGET_POSITION.2),
@@ -182,17 +186,17 @@ fn solve_part3<const MAX_T: N, const MAX_HP: u8>(debris: &[DebrisPiece]) -> impl
 
     astar(
         &(INITIAL_POSITION, 0, MAX_HP),
-        |&((x, y, z, w), t, hp)| {
+        |&((x, y, z), t, hp)| {
             let debris_at_t = &debris_maps[t + 1];
 
             let neighbors = [
-                (x, y, z, w),
-                (x + 1, y, z, w),
-                (x - 1, y, z, w),
-                (x, y + 1, z, w),
-                (x, y - 1, z, w),
-                (x, y, z - 1, w),
-                (x, y, z + 1, w),
+                (x, y, z),
+                (x + 1, y, z),
+                (x - 1, y, z),
+                (x, y + 1, z),
+                (x, y - 1, z),
+                (x, y, z - 1),
+                (x, y, z + 1),
             ];
 
             neighbors.into_iter().filter(|&p| in_bounds(p)).filter_map(move |p| {
@@ -203,7 +207,7 @@ fn solve_part3<const MAX_T: N, const MAX_HP: u8>(debris: &[DebrisPiece]) -> impl
                         if p == INITIAL_POSITION {
                             hp
                         } else {
-                            hp.checked_sub(debris_at_t[vec4_to_idx(p)])?
+                            hp.checked_sub(debris_at_t[vec3_to_idx(p)])?
                         },
                     ),
                     1,
