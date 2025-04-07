@@ -14,7 +14,6 @@ const Y_SIZE: N = 15;
 const Z_SIZE: N = 60;
 const W_SIZE: N = 3;
 
-const SPACE_SIZE_4D: usize = X_SIZE as usize * Y_SIZE as usize * Z_SIZE as usize * W_SIZE as usize;
 const SPACE_SIZE_3D: usize = X_SIZE as usize * Y_SIZE as usize * Z_SIZE as usize;
 
 const INITIAL_POSITION: Vec3 = (0, 0, 0);
@@ -52,7 +51,7 @@ fn vec3_to_idx((x, y, z): Vec3) -> usize {
 }
 
 fn construct_bitset(debris: &[DebrisPiece], t: N) -> FixedBitSet {
-    let mut bitset = FixedBitSet::with_capacity(SPACE_SIZE_4D);
+    let mut bitset = FixedBitSet::with_capacity(SPACE_SIZE_3D);
     for piece in debris {
         if let Some(p) = vec4_to_vec3(piece.position_at(t)) {
             bitset.set(vec3_to_idx(p), true);
